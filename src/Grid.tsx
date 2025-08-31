@@ -82,7 +82,7 @@ export function GridDemo({ rowData }: Props) {
     (event: GridColumnEvent) => {
       if (applyingRef.current) return;
 
-      // The "finished" property exists only on columnMoved events
+      // The "finished property exists only on columnMoved events
       if (
         event.type === "columnMoved" &&
         "finished" in event &&
