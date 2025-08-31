@@ -19,7 +19,7 @@ import {
   SetFilterModule,
 } from "ag-grid-enterprise";
 
-import { useGridStore } from "./store/gridStore";
+import { useGridStore, type ColStateItem } from "./store/gridStore";
 
 type GridColumnEvent =
   | ColumnMovedEvent
@@ -39,27 +39,37 @@ ModuleRegistry.registerModules([
 
 type Props = { rowData: any[] };
 
-export function GoodGrid({ rowData }: Props) {
+export function GridDemo({ rowData }: Props) {
   const { colState, setColState } = useGridStore();
-  // console.log("[colState] ", colState);
-  const applyingRef = useRef(false);
+  const applyingRef = useRef<boolean>(false);
 
-  const colDefs = useMemo(
-    () => [
+  const colDefs = useMemo(() => {
+    const baseDefs = [
       { field: "id" },
       { field: "name" },
       { field: "price" },
       { field: "category" },
-    ],
-    []
-  );
+    ];
+
+    if (colState && colState.length) {
+      return colState
+        .map((col) => {
+          const def = baseDefs.find((d) => d.field === col.colId);
+          if (!def) return;
+          return { ...def, ...col };
+        })
+        .filter(Boolean) as typeof baseDefs;
+    }
+
+    return baseDefs;
+  }, [colState]);
 
   const onGridReady = useCallback(
-    (e: GridReadyEvent) => {
+    (event: GridReadyEvent) => {
       if (colState && colState.length) {
         applyingRef.current = true;
         try {
-          e.api.applyColumnState({ state: colState, applyOrder: true });
+          event.api.applyColumnState({ state: colState, applyOrder: true });
         } finally {
           applyingRef.current = false;
         }
@@ -69,13 +79,18 @@ export function GoodGrid({ rowData }: Props) {
   );
 
   const handleColumnEvent = useCallback(
-    (e: GridColumnEvent) => {
+    (event: GridColumnEvent) => {
       if (applyingRef.current) return;
 
-      // Only 'columnMoved' has finished property
-      if (e.type === "columnMoved" && "finished" in e && !e.finished) return;
+      // The "finished" property exists only on columnMoved events
+      if (
+        event.type === "columnMoved" &&
+        "finished" in event &&
+        !event.finished
+      )
+        return;
 
-      const state = e.api.getColumnState();
+      const state: ColStateItem[] = event.api.getColumnState();
       setColState(state);
     },
     [setColState]
@@ -96,4 +111,4 @@ export function GoodGrid({ rowData }: Props) {
   );
 }
 
-export default GoodGrid;
+export default GridDemo;

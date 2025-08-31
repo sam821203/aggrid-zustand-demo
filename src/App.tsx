@@ -1,5 +1,5 @@
 import "./App.css";
-import GoodGrid from "./Grid";
+import GridDemo from "./Grid";
 
 const rowData = [
   { id: 1, name: "Apple", price: 120, category: "Fruit" },
@@ -11,7 +11,7 @@ const rowData = [
 function App() {
   return (
     <div style={{ padding: 16 }}>
-      <GoodGrid rowData={rowData} />
+      <GridDemo rowData={rowData} />
     </div>
   );
 }

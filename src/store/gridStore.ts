@@ -6,11 +6,10 @@ export type ColStateItem = Pick<
   ColumnState,
   "colId" | "hide" | "pinned" | "width"
 >;
-export type ColState = ColStateItem[];
 
 type GridState = {
-  colState: ColState | null;
-  setColState: (s: ColState) => void;
+  colState: ColStateItem[] | null;
+  setColState: (s: ColStateItem[]) => void;
   reset: () => void;
 };
 
