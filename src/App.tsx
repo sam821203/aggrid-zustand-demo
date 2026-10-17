@@ -1,18 +1,18 @@
-import "./App.css";
-import GridDemo from "./Grid";
-
-const rowData = [
-  { id: 1, name: "Apple", price: 120, category: "Fruit" },
-  { id: 2, name: "Banana", price: 90, category: "Fruit" },
-  { id: 3, name: "Carrot", price: 60, category: "Vegetable" },
-  { id: 4, name: "Durian", price: 300, category: "Fruit" },
-];
+import { HashRouter, Route, Routes } from "react-router-dom";
+import Layout from "./layout/Layout";
+import Home from "./pages/Home";
+import PracticePage from "./pages/PracticePage";
 
 function App() {
   return (
-    <div style={{ padding: 16 }}>
-      <GridDemo rowData={rowData} />
-    </div>
+    <HashRouter>
+      <Routes>
+        <Route element={<Layout />}>
+          <Route index element={<Home />} />
+          <Route path="practice/:slug" element={<PracticePage />} />
+        </Route>
+      </Routes>
+    </HashRouter>
   );
 }
 

@@ -19,7 +19,7 @@ import {
   SetFilterModule,
 } from "ag-grid-enterprise";
 
-import { useGridStore, type ColStateItem } from "./store/gridStore";
+import { useGridStore, type ColStateItem } from "./store";
 
 type GridColumnEvent =
   | ColumnMovedEvent
@@ -97,7 +97,7 @@ export function GridDemo({ rowData }: Props) {
   );
 
   return (
-    <div style={{ width: 1200, height: 800 }}>
+    <div style={{ width: "100%", height: 500 }}>
       <AgGridReact
         rowData={rowData}
         columnDefs={colDefs}
