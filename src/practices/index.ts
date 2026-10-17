@@ -18,4 +18,12 @@ export const practices: Practice[] = [
     date: "2025-08",
     component: lazy(() => import("./column-state-persist")),
   },
+  {
+    slug: "tanstack-optimistic",
+    title: "TanStack 樂觀更新",
+    description:
+      "用 TanStack Query 管理伺服器狀態，在 AG Grid 上做樂觀更新、失敗回滾與併發處理。",
+    date: "2026-10",
+    component: lazy(() => import("./tanstack-optimistic")),
+  },
 ];
