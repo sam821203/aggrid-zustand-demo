@@ -224,3 +224,8 @@ code {
   display: block;
   margin: 0;
 }
+
+.cell-pending {
+  color: var(--muted);
+  font-style: italic;
+}
