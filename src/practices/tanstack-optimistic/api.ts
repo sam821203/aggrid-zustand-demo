@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 export type Product = {
   id: string;
@@ -28,14 +29,22 @@ type ApiSettings = {
   clearLogs: () => void;
 };
 
-export const useApiSettings = create<ApiSettings>()((set) => ({
-  latency: 1200,
-  failRate: 0,
-  logs: [],
-  setLatency: (ms) => set({ latency: ms }),
-  setFailRate: (rate) => set({ failRate: rate }),
-  clearLogs: () => set({ logs: [] }),
-}));
+export const useApiSettings = create<ApiSettings>()(
+  persist(
+    (set) => ({
+      latency: 1200,
+      failRate: 0,
+      logs: [],
+      setLatency: (ms) => set({ latency: ms }),
+      setFailRate: (rate) => set({ failRate: rate }),
+      clearLogs: () => set({ logs: [] }),
+    }),
+    {
+      name: "tanstack-optimistic-api",
+      partialize: (s) => ({ latency: s.latency, failRate: s.failRate }),
+    }
+  )
+);
 
 let serverProducts: Product[] = [
   { id: "p1", name: "Apple", category: "Fruit", price: 120, stock: 30, active: true },
