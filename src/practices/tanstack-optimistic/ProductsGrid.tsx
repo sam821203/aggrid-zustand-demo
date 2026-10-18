@@ -88,9 +88,6 @@ export default function ProductsGrid() {
   return (
     <>
       {isError && <p>讀取失敗：{error.message}</p>}
-      {updateMutation.isError && (
-        <p className="hint">更新失敗：{updateMutation.error.message}</p>
-      )}
       <div style={{ width: "100%", height: 360 }}>
         <AgGridReact<GridRow>
           rowData={rows}

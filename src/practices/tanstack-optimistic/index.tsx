@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import ProductsGrid from "./ProductsGrid";
 import ApiPanel from "./ApiPanel";
+import Toaster from "./Toaster";
 
 const queryClient = new QueryClient();
 
@@ -15,6 +16,7 @@ export default function TanstackOptimistic() {
       <ProductsGrid />
       <h2 className="section-title">假後端</h2>
       <ApiPanel />
+      <Toaster />
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );
