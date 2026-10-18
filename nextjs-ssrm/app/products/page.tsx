@@ -1,8 +1,6 @@
-// Step 1 從這裡開始：把這個頁面改成 async Server Component，直接呼叫 lib/products.ts 讀資料
-
+import { Suspense } from "react";
 import ProductsGrid from "@/components/ProductsGrid";
-import { getCategorySummary } from "@/lib/products";
-import Link from "next/link";
+import CategorySummary from "./CategorySummary";
 
 type ProductsPageProps = {
   searchParams: Promise<{ category?: string }>;
@@ -11,9 +9,10 @@ type ProductsPageProps = {
 export default async function ProductsPage({
   searchParams,
 }: ProductsPageProps) {
-  // 讀 searchParams 之後，這一頁就變成每個請求都重新渲染（Dynamic）
+  // Step 6：頁面本身不再 await 慢的資料，只讀網址參數，很快就能 return
   const { category } = await searchParams;
-  const summary = await getCategorySummary();
+  const current = category ?? "all";
+
   console.log(
     "[ProductsPage] render on server",
     category ?? "all",
@@ -23,35 +22,16 @@ export default async function ProductsPage({
   return (
     <div>
       <h1>Products</h1>
-      <ul className="category-list">
-        {/* 「全部」就是沒有 category 的網址 */}
-        <li>
-          <Link
-            href="/products"
-            className={category ? "category-link" : "category-link active"}
-          >
-            全部
-          </Link>
-        </li>
-        {summary.map((item) => (
-          <li key={item.category}>
-            {/* 用 <Link> 換網址：只重新跑 Server Component，不會整頁重新載入 */}
-            <Link
-              href={{
-                pathname: "/products",
-                query: { category: item.category },
-              }}
-              className={
-                item.category ? "category-link" : "category-link active"
-              }
-            >
-              <strong>{item.category}</strong> {item.count} 筆 · 平均 $
-              {item.averagePrice}
-            </Link>
-          </li>
-        ))}
-      </ul>
-      <ProductsGrid key={category ?? "all"} category={category} />
+      {/* 統計還沒好之前先顯示 fallback，好了再由伺服器補送 */}
+      {/* key 換了就是一個新的 Suspense，切換分類時才會重新顯示 fallback，不會卡住整個導覽 */}
+      {/* Add a prefix so the two siblings' keys differ */}
+      <Suspense
+        key={`summary-${current}`}
+        fallback={<p className="hint">分類統計載入中…</p>}
+      >
+        <CategorySummary active={category} />
+      </Suspense>
+      <ProductsGrid key={`grid-${current}`} category={category} />
     </div>
   );
 }

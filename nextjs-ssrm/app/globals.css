@@ -105,3 +105,8 @@ code {
   border-color: var(--accent);
   color: var(--accent);
 }
+
+.error {
+  color: #dc2626;
+  margin: 0 0 8px;
+}

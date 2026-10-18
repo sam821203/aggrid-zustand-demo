@@ -1,18 +1,27 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
 import {
   AllCommunityModule,
+  CellEditRequestEvent,
   GetRowIdParams,
   IServerSideDatasource,
   ModuleRegistry,
   type ColDef,
 } from "ag-grid-community";
 import type { Product, ProductsRequest, ProductsResponse } from "@/lib/types";
-import { ServerSideRowModelModule } from "ag-grid-enterprise";
+import {
+  ServerSideRowModelApiModule,
+  ServerSideRowModelModule,
+} from "ag-grid-enterprise";
+import { updatePriceAction } from "@/app/products/actions";
 
-ModuleRegistry.registerModules([AllCommunityModule, ServerSideRowModelModule]);
+ModuleRegistry.registerModules([
+  AllCommunityModule,
+  ServerSideRowModelModule,
+  ServerSideRowModelApiModule,
+]);
 
 type ProductsGridProps = {
   category?: string;
@@ -59,12 +68,20 @@ const createDatasource = (
 };
 
 export default function ProductsGrid({ category }: ProductsGridProps) {
+  const [message, setMessage] = useState<string | null>(null);
+
   const columnDefs = useMemo<ColDef<Product>[]>(
     () => [
       { field: "id", width: 80 },
       { field: "name", flex: 1, filter: "agTextColumnFilter" },
       { field: "category", width: 130 },
-      { field: "price", width: 110, filter: "agNumberColumnFilter" },
+      {
+        field: "price",
+        width: 110,
+        filter: "agNumberColumnFilter",
+        editable: true,
+        cellEditor: "agNumberCellEditor",
+      },
       { field: "stock", width: 110 },
     ],
     [],
@@ -72,14 +89,38 @@ export default function ProductsGrid({ category }: ProductsGridProps) {
 
   const datasource = useMemo(() => createDatasource(category), [category]);
 
+  const onCellEditRequest = async (event: CellEditRequestEvent<Product>) => {
+    const price = Number(event.newValue);
+    if (event.newValue === null || Number.isNaN(price)) return;
+
+    setMessage(null);
+
+    // 像呼叫普通 async 函式一樣，實際上是送一個 POST 給伺服器
+    const result = await updatePriceAction(event.data.id, price);
+
+    if (!result.ok) {
+      setMessage(`更新 ${event.data.name} 失敗：${result.message}`);
+      return;
+    }
+
+    // 成功後重抓目前已載入的那幾段，格子才會顯示伺服器上的新值
+    // purge: false 會保留目前的列，等新資料回來再換掉，不會閃一下 loading
+    event.api.refreshServerSide({ purge: false });
+  };
+
   return (
-    <div style={{ height: 300 }}>
-      <AgGridReact<Product>
-        rowModelType="serverSide"
-        serverSideDatasource={datasource}
-        columnDefs={columnDefs}
-        getRowId={getRowId}
-      />
-    </div>
+    <>
+      {message && <p className="error">{message}</p>}
+      <div style={{ height: 300 }}>
+        <AgGridReact<Product>
+          rowModelType="serverSide"
+          serverSideDatasource={datasource}
+          columnDefs={columnDefs}
+          getRowId={getRowId}
+          readOnlyEdit
+          onCellEditRequest={onCellEditRequest}
+        />
+      </div>
+    </>
   );
 }
