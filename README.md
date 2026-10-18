@@ -7,6 +7,8 @@ npm install
 npm run dev
 ```
 
+另外有一個獨立的 Next.js 練習在 [`nextjs-ssrm/`](./nextjs-ssrm)，練 App Router、Server Action 和 AG Grid Server-Side Row Model，安裝與步驟見該資料夾的 README。
+
 ## 結構
 
 ```
