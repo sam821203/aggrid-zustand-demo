@@ -7,7 +7,13 @@ import type {
   GetRowIdParams,
 } from "ag-grid-community";
 import type { Product } from "./api";
-import { useProducts, useUpdateProduct } from "./queries";
+import {
+  productKeys,
+  useProducts,
+  useUpdateProduct,
+  type UpdateVariables,
+} from "./queries";
+import { useMutationState } from "@tanstack/react-query";
 
 type GridRow = Product & { pendingFields?: string[] };
 
@@ -22,20 +28,27 @@ export default function ProductsGrid() {
   const { data, isPending, isError, error } = useProducts();
   const updateMutation = useUpdateProduct();
 
+  // 取出「所有」還在進行中的更新的 variables
+  const pendingVariables = useMutationState({
+    filters: { mutationKey: productKeys.update, status: "pending" },
+    select: (mutation) => mutation.state.variables as UpdateVariables,
+  });
+
+  // 值已經在快取裡了（onMutate 寫進去的），這裡只負責加上處理中的標記
   const rows = useMemo<GridRow[] | undefined>(() => {
     if (!data) return data;
+    if (pendingVariables.length === 0) return data;
 
-    if (!updateMutation.isPending || !updateMutation.variables) return data;
+    return data.map((row) => {
+      // 找出這一列所有進行中的更新，把它們改到的欄位全部收集起來
+      const fields = pendingVariables
+        .filter((variables) => variables.id === row.id)
+        .flatMap((variables) => Object.keys(variables.patch));
 
-    // variables 就是最近一次 mutate() 傳入的 { id, patch }
-    const { id, patch } = updateMutation.variables;
-
-    return data.map((row) =>
-      row.id === id
-        ? { ...row, ...patch, pendingFields: Object.keys(patch) }
-        : row,
-    );
-  }, [data, updateMutation.isPending, updateMutation.variables]);
+      // 沒有處理中的欄位就維持原物件，AG Grid 不用重繪這一列
+      return fields.length > 0 ? { ...row, pendingFields: fields } : row;
+    });
+  }, [data, pendingVariables]);
 
   const columnDefs = useMemo<ColDef<GridRow>[]>(
     () => [
