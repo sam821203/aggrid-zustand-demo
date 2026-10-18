@@ -19,7 +19,10 @@ export type ProductsRequest = {
   startRow: number;
   endRow: number;
   sortModel: { colId: string; sort: "asc" | "desc" }[];
-  filterModel: Record<string, { filterType: string; type?: string; filter?: string | number }>;
+  filterModel: Record<
+    string,
+    { filterType: string; type?: string; filter?: string | number }
+  >;
   category?: string;
 };
 
