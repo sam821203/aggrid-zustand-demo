@@ -1,14 +1,19 @@
-import { useMemo } from "react";
-import { AgGridReact } from "ag-grid-react";
+import { useMemo, useState } from "react";
+import { AgGridReact, type CustomCellRendererProps } from "ag-grid-react";
 import type {
   CellClassParams,
   CellEditRequestEvent,
   ColDef,
+  EditableCallbackParams,
   GetRowIdParams,
+  RowClassParams,
 } from "ag-grid-community";
 import type { Product } from "./api";
 import {
+  isTempId,
   productKeys,
+  useCreateProduct,
+  useDeleteProduct,
   useProducts,
   useToggleActive,
   useUpdateProduct,
@@ -25,10 +30,46 @@ const pendingRule = {
     !!params.data?.pendingFields?.includes(params.colDef.field ?? ""),
 };
 
+// 暫時 id 的列（後端還沒回應的新增）不能編輯
+// 這時候送 PATCH 會帶著 temp id，後端根本找不到這筆商品
+const editableIfSaved = (params: EditableCallbackParams<GridRow>) =>
+  !isTempId(params.data?.id ?? "");
+
+// 還在新增中的整列套用處理中樣式
+const rowClassRules = {
+  "row-pending": (params: RowClassParams<GridRow>) =>
+    isTempId(params.data?.id ?? ""),
+};
+
+function DeleteButton({ data }: CustomCellRendererProps<GridRow>) {
+  const deleteMutation = useDeleteProduct();
+  if (!data) return null;
+
+  return (
+    <button
+      className="grid-button"
+      disabled={isTempId(data.id)}
+      onClick={() => deleteMutation.mutate(data.id)}
+    >
+      刪除
+    </button>
+  );
+}
+
+// Step 7：新增商品的預設值，名稱由輸入框決定
+const newProductDefaults = {
+  category: "Uncategorized",
+  price: 0,
+  stock: 0,
+  active: false,
+};
+
 export default function ProductsGrid() {
   const { data, isPending, isError, error } = useProducts();
   const updateMutation = useUpdateProduct();
   const toggleActive = useToggleActive();
+  const createMutation = useCreateProduct();
+  const [newName, setNewName] = useState("New product");
 
   // 取出「所有」還在進行中的更新的 variables
   const pendingVariables = useMutationState({
@@ -60,21 +101,27 @@ export default function ProductsGrid() {
       {
         field: "price",
         width: 110,
-        editable: true,
+        editable: editableIfSaved,
         cellClassRules: pendingRule,
       },
       {
         field: "stock",
         width: 110,
-        editable: true,
+        editable: editableIfSaved,
         cellClassRules: pendingRule,
       },
       {
         field: "active",
         headerName: "上架",
         width: 100,
-        editable: true,
+        editable: editableIfSaved,
         cellClassRules: pendingRule,
+      },
+      {
+        headerName: "",
+        width: 90,
+        sortable: false,
+        cellRenderer: DeleteButton,
       },
     ],
     [],
@@ -103,12 +150,28 @@ export default function ProductsGrid() {
   return (
     <>
       {isError && <p>讀取失敗：{error.message}</p>}
+      <form
+        className="grid-toolbar"
+        onSubmit={(event) => {
+          event.preventDefault();
+          createMutation.mutate({ ...newProductDefaults, name: newName });
+        }}
+      >
+        <input
+          value={newName}
+          onChange={(event) => setNewName(event.target.value)}
+          placeholder="商品名稱"
+          aria-label="商品名稱"
+        />
+        <button type="submit">新增商品</button>
+      </form>
       <div style={{ width: "100%", height: 360 }}>
         <AgGridReact<GridRow>
           rowData={rows}
           getRowId={getRowId}
           columnDefs={columnDefs}
           loading={isPending}
+          rowClassRules={rowClassRules}
           readOnlyEdit // 資料只有一個來源，就是 TanStack 快取
           onCellEditRequest={onCellEditRequest}
         />

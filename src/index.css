@@ -271,3 +271,33 @@ code {
 .cell-pending .ag-checkbox-input-wrapper {
   opacity: 0.45;
 }
+
+.grid-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.grid-toolbar input {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+}
+
+.grid-button {
+  padding: 2px 10px;
+  font-size: 0.85rem;
+}
+
+.grid-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.row-pending {
+  color: var(--muted);
+  font-style: italic;
+}

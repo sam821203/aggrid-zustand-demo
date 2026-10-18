@@ -1,5 +1,12 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  QueryClient,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import {
+  createProduct,
+  deleteProduct,
   fetchProducts,
   updateProduct,
   type NewProduct,
@@ -12,17 +19,34 @@ export type UpdateVariables = {
   patch: Partial<NewProduct>;
 };
 
+export const TEMP_ID_PREFIX = "temp-";
+
 export const productKeys = {
   all: ["products"] as const,
   // mutation 的識別 key，讓別的地方能用 useMutationState 找到「所有進行中的更新」
-  update: ["updateProduct"] as const,
+  mutations: ["productMutation"] as const,
+  update: ["productMutation", "update"] as const,
+  create: ["productMutation", "create"] as const,
+  remove: ["productMutation", "delete"] as const,
 };
+
+export function isTempId(id: string) {
+  return id.startsWith(TEMP_ID_PREFIX);
+}
 
 export function useProducts() {
   return useQuery({
     queryKey: productKeys.all,
     queryFn: fetchProducts,
   });
+}
+
+function refetchIfLastMutation(queryClient: QueryClient) {
+  // 改成數 productKeys.mutations，新增、更新、刪除會一起算
+  // 不然一筆更新完成時，如果還有新增在跑，重抓回來的清單會把那筆暫時的新增列蓋掉
+  if (queryClient.isMutating({ mutationKey: productKeys.mutations }) === 1) {
+    return queryClient.invalidateQueries({ queryKey: productKeys.all });
+  }
 }
 
 // 把 useUpdateProduct 改成樂觀更新
@@ -93,15 +117,11 @@ export function useUpdateProduct() {
       useToastStore.getState().showError(`更新 ${name} 失敗：${error.message}`);
     },
     // 不管成功或失敗都向伺服器重抓一次，只有最後一個才重抓
-    onSettled: () => {
-      if (queryClient.isMutating({ mutationKey: productKeys.update }) === 1) {
-        return queryClient.invalidateQueries({ queryKey: productKeys.all });
-      }
-    },
+    onSettled: () => refetchIfLastMutation(queryClient),
   });
 }
 
-// Step 6：useToggleActive（處理連續點擊）
+// 處理連續點擊
 export function useToggleActive() {
   const queryClient = useQueryClient();
   const { mutate } = useUpdateProduct();
@@ -115,4 +135,91 @@ export function useToggleActive() {
     mutate({ id, patch: { active: !product.active } });
   };
 }
-// Step 7：useCreateProduct、useDeleteProduct
+// 樂觀新增
+export function useCreateProduct() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationKey: productKeys.create,
+    mutationFn: (input: NewProduct) => createProduct(input),
+    onMutate: async (input) => {
+      await queryClient.cancelQueries({ queryKey: productKeys.all });
+
+      // 後端還沒給 id，先產生一個暫時 id，讓 AG Grid 的 getRowId 有東西可以認
+      const tempId = `${TEMP_ID_PREFIX}${Date.now()}`;
+
+      // 直接把新的一列加到清單最後面，使用者馬上就看得到
+      queryClient.setQueryData<Product[]>(productKeys.all, (old) => [
+        ...(old ?? []),
+        { ...input, id: tempId },
+      ]);
+
+      return { tempId };
+    },
+    // 成功：把暫時那一列換成後端回傳的資料（帶有真 id）
+    onSuccess: (created, _input, onMutateResult) => {
+      queryClient.setQueryData<Product[]>(productKeys.all, (old) => {
+        old?.map((product) =>
+          product.id === onMutateResult?.tempId ? created : product,
+        );
+      });
+    },
+
+    // 失敗：新增的回滾就是把暫時那一列拿掉，不用存舊資料
+    onError: (error, _input, onMutateResult) => {
+      queryClient.setQueryData<Product[]>(productKeys.all, (old) =>
+        old?.filter((product) => product.id !== onMutateResult?.tempId),
+      );
+      useToastStore.getState().showError(`新增失敗：${error.message}`);
+    },
+  });
+}
+
+// 樂觀刪除
+export function useDeleteProduct() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationKey: productKeys.remove,
+    mutationFn: (id: string) => deleteProduct(id),
+
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: productKeys.all });
+
+      const list = queryClient.getQueryData<Product[]>(productKeys.all) ?? [];
+
+      // 失敗時要放回「原本的位置」，所以除了被刪掉的那筆資料，還要記住它在第幾列
+      const index = list.findIndex((product) => product.id === id);
+      const removed = index >= 0 ? list[index] : undefined;
+
+      queryClient.setQueryData<Product[]>(productKeys.all, (old) =>
+        old?.filter((product) => product.id !== id),
+      );
+
+      return { removed, index };
+    },
+
+    // 失敗：用存下來的 index 插回原位，而不是 push 到最後
+    onError: (error, id, onMutateResult) => {
+      const removed = onMutateResult?.removed;
+
+      if (removed) {
+        queryClient.setQueryData<Product[]>(productKeys.all, (old) => {
+          const list = old ?? [];
+          // 防止重複：如果期間重抓過，這一列可能已經被放回來了
+          if (list.some((product) => product.id === id)) return list;
+
+          const next = [...list];
+          // 期間如果有別列被刪掉，清單變短，index 可能超出範圍，所以取較小值
+          next.splice(Math.min(onMutateResult.index, next.length), 0, removed);
+          return next;
+        });
+      }
+
+      const name = removed?.name ?? id;
+      useToastStore.getState().showError(`刪除 ${name} 失敗：${error.message}`);
+    },
+
+    onSettled: () => refetchIfLastMutation(queryClient),
+  });
+}
