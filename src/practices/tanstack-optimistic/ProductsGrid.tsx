@@ -10,6 +10,7 @@ import type { Product } from "./api";
 import {
   productKeys,
   useProducts,
+  useToggleActive,
   useUpdateProduct,
   type UpdateVariables,
 } from "./queries";
@@ -27,6 +28,7 @@ const pendingRule = {
 export default function ProductsGrid() {
   const { data, isPending, isError, error } = useProducts();
   const updateMutation = useUpdateProduct();
+  const toggleActive = useToggleActive();
 
   // 取出「所有」還在進行中的更新的 variables
   const pendingVariables = useMutationState({
@@ -67,13 +69,26 @@ export default function ProductsGrid() {
         editable: true,
         cellClassRules: pendingRule,
       },
-      { field: "active", headerName: "上架", width: 100 },
+      {
+        field: "active",
+        headerName: "上架",
+        width: 100,
+        editable: true,
+        cellClassRules: pendingRule,
+      },
     ],
     [],
   );
 
   const onCellEditRequest = (event: CellEditRequestEvent<GridRow>) => {
     const field = event.colDef.field;
+
+    // 在 Number() 轉換之前
+    if (field === "active") {
+      toggleActive(event.data.id);
+      return;
+    }
+
     const value = Number(event.newValue);
 
     if (event.newValue === null || Number.isNaN(value)) return;

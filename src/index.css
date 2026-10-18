@@ -267,3 +267,7 @@ code {
   line-height: 1.4;
   color: var(--muted);
 }
+
+.cell-pending .ag-checkbox-input-wrapper {
+  opacity: 0.45;
+}

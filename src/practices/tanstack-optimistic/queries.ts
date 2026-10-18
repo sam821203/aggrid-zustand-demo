@@ -92,12 +92,27 @@ export function useUpdateProduct() {
       const name = onMutateResult?.name ?? id;
       useToastStore.getState().showError(`更新 ${name} 失敗：${error.message}`);
     },
-    // 不管成功或失敗都向伺服器重抓一次，確保快取最後跟後端一致
+    // 不管成功或失敗都向伺服器重抓一次，只有最後一個才重抓
     onSettled: () => {
-      return queryClient.invalidateQueries({ queryKey: productKeys.all });
+      if (queryClient.isMutating({ mutationKey: productKeys.update }) === 1) {
+        return queryClient.invalidateQueries({ queryKey: productKeys.all });
+      }
     },
   });
 }
 
 // Step 6：useToggleActive（處理連續點擊）
+export function useToggleActive() {
+  const queryClient = useQueryClient();
+  const { mutate } = useUpdateProduct();
+
+  return (id: string) => {
+    const product = queryClient
+      .getQueryData<Product[]>(productKeys.all)
+      ?.find((item) => item.id === id);
+    if (!product) return;
+
+    mutate({ id, patch: { active: !product.active } });
+  };
+}
 // Step 7：useCreateProduct、useDeleteProduct
