@@ -32,8 +32,9 @@ AG Grid SSRM 是 Enterprise 功能，沒有授權金鑰時會出現浮水印和 
 
 **驗收**
 - 畫面出現 5 個分類的統計
-- `console.log` 出現在**終端機**，不在瀏覽器 console
+- `console.log` 出現在**跑 `npm run dev` 的終端機**。開發模式下瀏覽器 console 也會出現同一行，但前面有灰色的「Server」標籤，那是 React 為了方便除錯轉送過來的，不是在瀏覽器執行
 - 瀏覽器 Network 面板看不到任何拿統計資料的 API 請求；右鍵「檢視原始碼」看得到資料已經在 HTML 裡
+- 跑一次 `npm run build`：`/products` 前面是 ○（Static），而且 `console.log` 在 **build 的時候**就印出來了。想想看這代表什麼（Step 4 會回來處理）
 
 **面試這樣講**
 - App Router 裡元件預設是 Server Component，只在伺服器執行，不會打包進瀏覽器的 JS
