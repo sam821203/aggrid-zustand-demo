@@ -53,7 +53,7 @@ AG Grid SSRM 是 Enterprise 功能，沒有授權金鑰時會出現浮水印和 
 **實驗（做完再改回來）**
 1. 拿掉 `"use client"`，看錯誤訊息怎麼說
 2. 在 `page.tsx` 傳一個函式給 `ProductsGrid`，例如 `onSelect={() => {}}`，看錯誤訊息
-3. 在 `ProductsGrid.tsx` 裡 import `lib/products.ts`，看錯誤訊息
+3. 在 `ProductsGrid.tsx` 裡 import `lib/products.ts` 的函式，**並且實際用到它**（例如 `console.log(getProducts)`），看錯誤訊息。只 import 不使用的話，這行會在編譯時被刪掉，不會報錯
 
 **面試這樣講**
 - 需要狀態、事件、瀏覽器 API 或第三方互動元件（AG Grid）時，才標 `"use client"`
